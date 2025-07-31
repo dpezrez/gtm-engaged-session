@@ -1,4 +1,4 @@
-# Engagement Quality Tracking for Google Tag Manager (GTM Custom HTML Tag)
+# Engaged Session tracking (GTM Custom HTML Tag)
 
 This repository contains a **Custom HTML Tag** and supporting GTM setup for tracking **engaged sessions** based on page views and engaged time to recreate the same (or similar) concept in GA4. This tag pushes a daya layer event when the session is engaged, so you can use this as a trigger for any of your tags in GTM.
 
