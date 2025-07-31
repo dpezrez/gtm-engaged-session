@@ -1,0 +1,176 @@
+<script>
+(function() {
+  // ==========================
+  // CONFIGURATION VARIABLES
+  // ==========================
+  var PAGEVIEW_THRESHOLD = 2;           // Minimum pageviews to consider engaged
+  var ENGAGED_TIME_THRESHOLD = 10000;   // Active time (ms) to consider engaged
+  var EVENT_NAME = 'session_engaged';   // Event name for dataLayer push
+  var STORAGE_KEY = 'session_engagement_data';
+  var IDLE_TIMEOUT_MS = 2000;           // Idle threshold (ms)
+  var TIMER_INTERVAL_MS = 250;          // Engagement timer frequency (ms)
+  // ==========================
+
+  // Load session data or initialize defaults
+  function loadSessionData() {
+    var raw = sessionStorage.getItem(STORAGE_KEY);
+    var data;
+    try {
+      data = raw ? JSON.parse(raw) : {};
+    } catch (e) {
+      data = {};
+    }
+    return {
+      engaged: !!data.engaged,
+      pageviews: data.pageviews || 0,
+      engagedTime: data.engagedTime || 0,
+      totalTime: data.totalTime || 0,
+      visibleTime: data.visibleTime || 0,
+      timeDeltaTotal: data.timeDeltaTotal || 0,
+      timeDeltaVisible: data.timeDeltaVisible || 0,
+      engagementScore: data.engagementScore || 0,
+      firstInteractionTimestamp: data.firstInteractionTimestamp || null,
+      lastInteractionTimestamp: data.lastInteractionTimestamp || null,
+      engagedTimestamp: data.engagedTimestamp || null,
+      engagedReason: data.engagedReason || null
+    };
+  }
+
+  // Save session data
+  function saveSessionData(data) {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+
+  var sessionData = loadSessionData();
+  var now = Date.now();
+
+  // Increment pageview count
+  sessionData.pageviews += 1;
+  saveSessionData(sessionData);
+
+  // Check pageview-based engagement
+  if (!sessionData.engaged && sessionData.pageviews >= PAGEVIEW_THRESHOLD) {
+    sessionData.engaged = true;
+    sessionData.engagedReason = 'pageview';
+    sessionData.engagedTimestamp = now;
+    saveSessionData(sessionData);
+
+    // Push engagement details to dataLayer
+    window.dataLayer.push({
+      event: EVENT_NAME,
+      engagement_reason: sessionData.engagedReason,
+      engaged_time: sessionData.engagedTime,
+      total_time: sessionData.totalTime,
+      visible_time: sessionData.visibleTime
+    });
+  }
+
+  // Timer variables
+  var lastActive = now;
+  var lastTick = null;
+  var lastVisibleTick = null;
+  var engagementInterval = null;
+
+  function startTimer() {
+    if (!engagementInterval) {
+      lastTick = Date.now();
+      lastVisibleTick = lastTick;
+      engagementInterval = setInterval(trackTime, TIMER_INTERVAL_MS);
+    }
+  }
+
+  function stopTimer() {
+    if (engagementInterval) {
+      clearInterval(engagementInterval);
+      engagementInterval = null;
+    }
+    lastTick = null;
+    lastVisibleTick = null;
+  }
+
+  function trackTime() {
+    var nowTick = Date.now();
+
+    if (document.hidden) {
+      stopTimer();
+      return;
+    }
+
+    var delta = (lastTick && nowTick > lastTick) ? nowTick - lastTick : 0;
+    var visibleDelta = (lastVisibleTick && nowTick > lastVisibleTick) ? nowTick - lastVisibleTick : 0;
+
+    // Update timers
+    sessionData.totalTime = nowTick - sessionData.firstInteractionTimestamp;
+    if (visibleDelta > 0) sessionData.visibleTime += visibleDelta;
+    if (nowTick - lastActive < IDLE_TIMEOUT_MS && delta > 0) {
+      sessionData.engagedTime += delta;
+    }
+
+    // Calculate deltas
+    sessionData.timeDeltaTotal = sessionData.totalTime - sessionData.engagedTime;
+    sessionData.timeDeltaVisible = sessionData.visibleTime - sessionData.engagedTime;
+
+    // Update engagement score
+    if (sessionData.visibleTime > 0 && sessionData.engagedTime > 0) {
+      sessionData.engagementScore = Math.min(
+        100,
+        Math.floor((sessionData.engagedTime / sessionData.visibleTime) * 100)
+      );
+    } else {
+      sessionData.engagementScore = null;
+    }
+
+    saveSessionData(sessionData);
+
+    // Check time-based engagement
+    if (!sessionData.engaged && sessionData.engagedTime >= ENGAGED_TIME_THRESHOLD) {
+      sessionData.engaged = true;
+      sessionData.engagedReason = 'time';
+      sessionData.engagedTimestamp = nowTick;
+      saveSessionData(sessionData);
+
+      // Push engagement details to dataLayer
+      window.dataLayer.push({
+        event: EVENT_NAME,
+        engagement_reason: sessionData.engagedReason,
+        engaged_time: sessionData.engagedTime,
+        total_time: sessionData.totalTime,
+        visible_time: sessionData.visibleTime
+      });
+    }
+
+    lastTick = nowTick;
+    lastVisibleTick = nowTick;
+  }
+
+  // User interaction handler
+  function markActive() {
+    var current = Date.now();
+    lastActive = current;
+
+    if (!sessionData.firstInteractionTimestamp) {
+      sessionData.firstInteractionTimestamp = current;
+    }
+
+    sessionData.lastInteractionTimestamp = current;
+    saveSessionData(sessionData);
+
+    if (!document.hidden) {
+      startTimer();
+    }
+  }
+
+  // Pause when tab is hidden
+  document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+      stopTimer();
+    }
+  });
+
+  // Attach user activity listeners
+  var events = ['scroll', 'mousemove', 'touchstart', 'click'];
+  for (var i = 0; i < events.length; i++) {
+    window.addEventListener(events[i], markActive, false);
+  }
+})();
+</script>
