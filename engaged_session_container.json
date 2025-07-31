@@ -1,0 +1,217 @@
+{
+    "exportFormatVersion": 2,
+    "exportTime": "2025-07-31 10:15:43",
+    "containerVersion": {
+        "path": "accounts/6005894744/containers/58619838/versions/0",
+        "accountId": "6005894744",
+        "containerId": "58619838",
+        "containerVersionId": "0",
+        "container": {
+            "path": "accounts/6005894744/containers/58619838",
+            "accountId": "6005894744",
+            "containerId": "58619838",
+            "name": "danalytics.co.uk",
+            "publicId": "GTM-M5NW9PB",
+            "usageContext": [
+                "WEB"
+            ],
+            "fingerprint": "1644222779768",
+            "tagManagerUrl": "https://tagmanager.google.com/#/container/accounts/6005894744/containers/58619838/workspaces?apiLink=container",
+            "features": {
+                "supportUserPermissions": true,
+                "supportEnvironments": true,
+                "supportWorkspaces": true,
+                "supportGtagConfigs": false,
+                "supportBuiltInVariables": true,
+                "supportClients": false,
+                "supportFolders": true,
+                "supportTags": true,
+                "supportTemplates": true,
+                "supportTriggers": true,
+                "supportVariables": true,
+                "supportVersions": true,
+                "supportZones": true,
+                "supportTransformations": false
+            },
+            "tagIds": [
+                "GTM-M5NW9PB"
+            ]
+        },
+        "tag": [
+            {
+                "accountId": "6005894744",
+                "containerId": "58619838",
+                "tagId": "28",
+                "name": "cHTML - Engaged Session Script",
+                "type": "html",
+                "parameter": [
+                    {
+                        "type": "TEMPLATE",
+                        "key": "html",
+                        "value": "<script>\n(function() {\n  // ==========================\n  // CONFIGURATION VARIABLES\n  // ==========================\n  var PAGEVIEW_THRESHOLD = 2;           // Minimum pageviews to consider engaged\n  var ENGAGED_TIME_THRESHOLD = 10000;   // Active time (ms) to consider engaged\n  var EVENT_NAME = 'session_engaged';   // Event name for dataLayer push\n  var STORAGE_KEY = 'session_engagement_data';\n  var IDLE_TIMEOUT_MS = 2000;           // Idle threshold (ms)\n  var TIMER_INTERVAL_MS = 250;          // Engagement timer frequency (ms)\n  // ==========================\n\n  // Load session data or initialize defaults\n  function loadSessionData() {\n    var raw = sessionStorage.getItem(STORAGE_KEY);\n    var data;\n    try {\n      data = raw ? JSON.parse(raw) : {};\n    } catch (e) {\n      data = {};\n    }\n    return {\n      engaged: !!data.engaged,\n      pageviews: data.pageviews || 0,\n      engagedTime: data.engagedTime || 0,\n      totalTime: data.totalTime || 0,\n      visibleTime: data.visibleTime || 0,\n      timeDeltaTotal: data.timeDeltaTotal || 0,\n      timeDeltaVisible: data.timeDeltaVisible || 0,\n      engagementScore: data.engagementScore || 0,\n      firstInteractionTimestamp: data.firstInteractionTimestamp || null,\n      lastInteractionTimestamp: data.lastInteractionTimestamp || null,\n      engagedTimestamp: data.engagedTimestamp || null,\n      engagedReason: data.engagedReason || null\n    };\n  }\n\n  // Save session data\n  function saveSessionData(data) {\n    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data));\n  }\n\n  var sessionData = loadSessionData();\n  var now = Date.now();\n\n  // Increment pageview count\n  sessionData.pageviews += 1;\n  saveSessionData(sessionData);\n\n  // Check pageview-based engagement\n  if (!sessionData.engaged && sessionData.pageviews >= PAGEVIEW_THRESHOLD) {\n    sessionData.engaged = true;\n    sessionData.engagedReason = 'pageview';\n    sessionData.engagedTimestamp = now;\n    saveSessionData(sessionData);\n\n    // Push engagement details to dataLayer\n    window.dataLayer.push({\n      event: EVENT_NAME,\n      engagement_reason: sessionData.engagedReason,\n      engaged_time: sessionData.engagedTime,\n      total_time: sessionData.totalTime,\n      visible_time: sessionData.visibleTime\n    });\n  }\n\n  // Timer variables\n  var lastActive = now;\n  var lastTick = null;\n  var lastVisibleTick = null;\n  var engagementInterval = null;\n\n  function startTimer() {\n    if (!engagementInterval) {\n      lastTick = Date.now();\n      lastVisibleTick = lastTick;\n      engagementInterval = setInterval(trackTime, TIMER_INTERVAL_MS);\n    }\n  }\n\n  function stopTimer() {\n    if (engagementInterval) {\n      clearInterval(engagementInterval);\n      engagementInterval = null;\n    }\n    lastTick = null;\n    lastVisibleTick = null;\n  }\n\n  function trackTime() {\n    var nowTick = Date.now();\n\n    if (document.hidden) {\n      stopTimer();\n      return;\n    }\n\n    var delta = (lastTick && nowTick > lastTick) ? nowTick - lastTick : 0;\n    var visibleDelta = (lastVisibleTick && nowTick > lastVisibleTick) ? nowTick - lastVisibleTick : 0;\n\n    // Update timers\n    sessionData.totalTime = nowTick - sessionData.firstInteractionTimestamp;\n    if (visibleDelta > 0) sessionData.visibleTime += visibleDelta;\n    if (nowTick - lastActive < IDLE_TIMEOUT_MS && delta > 0) {\n      sessionData.engagedTime += delta;\n    }\n\n    // Calculate deltas\n    sessionData.timeDeltaTotal = sessionData.totalTime - sessionData.engagedTime;\n    sessionData.timeDeltaVisible = sessionData.visibleTime - sessionData.engagedTime;\n\n    // Update engagement score\n    if (sessionData.visibleTime > 0 && sessionData.engagedTime > 0) {\n      sessionData.engagementScore = Math.min(\n        100,\n        Math.floor((sessionData.engagedTime / sessionData.visibleTime) * 100)\n      );\n    } else {\n      sessionData.engagementScore = null;\n    }\n\n    saveSessionData(sessionData);\n\n    // Check time-based engagement\n    if (!sessionData.engaged && sessionData.engagedTime >= ENGAGED_TIME_THRESHOLD) {\n      sessionData.engaged = true;\n      sessionData.engagedReason = 'time';\n      sessionData.engagedTimestamp = nowTick;\n      saveSessionData(sessionData);\n\n      // Push engagement details to dataLayer\n      window.dataLayer.push({\n        event: EVENT_NAME,\n        engagement_reason: sessionData.engagedReason,\n        engaged_time: sessionData.engagedTime,\n        total_time: sessionData.totalTime,\n        visible_time: sessionData.visibleTime\n      });\n    }\n\n    lastTick = nowTick;\n    lastVisibleTick = nowTick;\n  }\n\n  // User interaction handler\n  function markActive() {\n    var current = Date.now();\n    lastActive = current;\n\n    if (!sessionData.firstInteractionTimestamp) {\n      sessionData.firstInteractionTimestamp = current;\n    }\n\n    sessionData.lastInteractionTimestamp = current;\n    saveSessionData(sessionData);\n\n    if (!document.hidden) {\n      startTimer();\n    }\n  }\n\n  // Pause when tab is hidden\n  document.addEventListener('visibilitychange', function() {\n    if (document.hidden) {\n      stopTimer();\n    }\n  });\n\n  // Attach user activity listeners\n  var events = ['scroll', 'mousemove', 'touchstart', 'click'];\n  for (var i = 0; i < events.length; i++) {\n    window.addEventListener(events[i], markActive, false);\n  }\n})();\n</script>"
+                    },
+                    {
+                        "type": "BOOLEAN",
+                        "key": "supportDocumentWrite",
+                        "value": "false"
+                    }
+                ],
+                "fingerprint": "1753956798213",
+                "firingTriggerId": [
+                    "2147479553"
+                ],
+                "tagFiringOption": "ONCE_PER_EVENT",
+                "monitoringMetadata": {
+                    "type": "MAP"
+                },
+                "consentSettings": {
+                    "consentStatus": "NOT_NEEDED"
+                }
+            },
+            {
+                "accountId": "6005894744",
+                "containerId": "58619838",
+                "tagId": "32",
+                "name": "GA Event - session_engaged",
+                "type": "gaawe",
+                "parameter": [
+                    {
+                        "type": "BOOLEAN",
+                        "key": "sendEcommerceData",
+                        "value": "false"
+                    },
+                    {
+                        "type": "LIST",
+                        "key": "eventSettingsTable",
+                        "list": [
+                            {
+                                "type": "MAP",
+                                "map": [
+                                    {
+                                        "type": "TEMPLATE",
+                                        "key": "parameter",
+                                        "value": "session_engagement_reason"
+                                    },
+                                    {
+                                        "type": "TEMPLATE",
+                                        "key": "parameterValue",
+                                        "value": "{{DL - engagement_reason}}"
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "MAP",
+                                "map": [
+                                    {
+                                        "type": "TEMPLATE",
+                                        "key": "parameter",
+                                        "value": "session_engagement_score"
+                                    },
+                                    {
+                                        "type": "TEMPLATE",
+                                        "key": "parameterValue",
+                                        "value": "{{cJS - Session Engagement Score}}"
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "type": "TEMPLATE",
+                        "key": "eventName",
+                        "value": "session_engaged"
+                    },
+                    {
+                        "type": "TEMPLATE",
+                        "key": "measurementIdOverride",
+                        "value": "G-123456789"
+                    }
+                ],
+                "fingerprint": "1753956880766",
+                "firingTriggerId": [
+                    "29"
+                ],
+                "tagFiringOption": "ONCE_PER_EVENT",
+                "monitoringMetadata": {
+                    "type": "MAP"
+                },
+                "consentSettings": {
+                    "consentStatus": "NOT_NEEDED"
+                }
+            }
+        ],
+        "trigger": [
+            {
+                "accountId": "6005894744",
+                "containerId": "58619838",
+                "triggerId": "29",
+                "name": "Event - session_engaged",
+                "type": "CUSTOM_EVENT",
+                "customEventFilter": [
+                    {
+                        "type": "EQUALS",
+                        "parameter": [
+                            {
+                                "type": "TEMPLATE",
+                                "key": "arg0",
+                                "value": "{{_event}}"
+                            },
+                            {
+                                "type": "TEMPLATE",
+                                "key": "arg1",
+                                "value": "session_engaged"
+                            }
+                        ]
+                    }
+                ],
+                "fingerprint": "1753955604834"
+            }
+        ],
+        "variable": [
+            {
+                "accountId": "6005894744",
+                "containerId": "58619838",
+                "variableId": "30",
+                "name": "cJS - Session Engagement Score",
+                "type": "jsm",
+                "parameter": [
+                    {
+                        "type": "TEMPLATE",
+                        "key": "javascript",
+                        "value": "function() {\n  var STORAGE_KEY = 'session_engagement_data';\n  try {\n    var raw = sessionStorage.getItem(STORAGE_KEY);\n    if (!raw) return undefined; // No data yet\n    var data = JSON.parse(raw);\n    return data.engagementScore || undefined; // Return score or undefined if not available\n  } catch (e) {\n    return undefined; // In case of JSON parse error\n  }\n}"
+                    }
+                ],
+                "fingerprint": "1753955774958",
+                "formatValue": {}
+            },
+            {
+                "accountId": "6005894744",
+                "containerId": "58619838",
+                "variableId": "33",
+                "name": "DL - engagement_reason",
+                "type": "v",
+                "parameter": [
+                    {
+                        "type": "INTEGER",
+                        "key": "dataLayerVersion",
+                        "value": "2"
+                    },
+                    {
+                        "type": "BOOLEAN",
+                        "key": "setDefaultValue",
+                        "value": "false"
+                    },
+                    {
+                        "type": "TEMPLATE",
+                        "key": "name",
+                        "value": "engagement_reason"
+                    }
+                ],
+                "fingerprint": "1753956252911",
+                "formatValue": {}
+            }
+        ],
+        "fingerprint": "1753956943665",
+        "tagManagerUrl": "https://tagmanager.google.com/#/versions/accounts/6005894744/containers/58619838/versions/0?apiLink=version"
+    }
+}
